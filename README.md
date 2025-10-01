@@ -5,7 +5,7 @@ A homemade algorithm that synchronises a text alignment with a reference text.
 Most STT algorithms don't support receiving a reference text, meaning you have to trust their given characters alignment.   
 However, sometimes you already have the text that is being said in the audio, but you don't have the alignment, so you end up using these STT that output a slightly different text.   
 But what if you need the exact same text that you have?   
-This algorithm solves this issue.
+This algorithm solves this issue.   
 
 # Algorithm
 
@@ -26,48 +26,48 @@ The alignment and reference text is broken up using a custom Greedy LCS algorith
 This algorithm is homemade.   
 The following is an example and not the mathematical formula.   
 
-Say you have:
-`AkkB`
+Say you have:   
+`AkkB`   
 With `kk` being two characters that need to be removed.   
 The duration of the first `k` will be added to the duration of `A`.   
 Same for the second `k` and `B`.   
 
-If the number of `k`s is odd, the one in the middle will be distributed evenly to `A` and `B`.
+If the number of `k`s is odd, the one in the middle will be distributed evenly to `A` and `B`.   
 
-If the `k`s are in the far left or right, they get distributed to their only neighbour.
+If the `k`s are in the far left or right, they get distributed to their only neighbour.   
 
 ## Missing characters insertion
-This algorithm is also homemade.
+This algorithm is also homemade.   
 The following is an example and not the mathematical formula.   
 This algorithm follows an even distribution, but in some cases, a logarithmic distribution algorithm could also be accurate.   
 
-Say you have:
-`AkkB`
+Say you have:   
+`AkkB`   
 With `kk` being two characters that need to be inserted.   
-The duration of `A` will become `2/4` of what it was.
-Same for `B`.
+The duration of `A` will become `2/4` of what it was.   
+Same for `B`.   
 
-The duration of `k1` will become `2/4` of the duration of `A` since its closer to it.
-Same for `k2` with `B`.
-
-
-Now with an odd amount of `k`s.
-`AkkkB`
-The duration of `A` will become `2/5` of what it was.
-Same for `B`.
-
-The duration of `k1` will become `2/5` of the duration of `A`.
-Same for `k3` with `B`.
-
-The duration of `k2` will become `1/5` of the duration of `A` plus `1/5` of the duration of `B`.
-
-If the `k`s are in the far left or right, their nearest neighbour gets evenly distributed to them.
+The duration of `k1` will become `2/4` of the duration of `A` since its closer to it.   
+Same for `k2` with `B`.   
 
 
-If we have this pattern:
-`AkkBkC`
-`B` takes in account all of its neighbours.
+Now with an odd amount of `k`s.   
+`AkkkB`   
+The duration of `A` will become `2/5` of what it was.   
+Same for `B`.   
+
+The duration of `k1` will become `2/5` of the duration of `A`.   
+Same for `k3` with `B`.   
+
+The duration of `k2` will become `1/5` of the duration of `A` plus `1/5` of the duration of `B`.   
+
+If the `k`s are in the far left or right, their nearest neighbour gets evenly distributed to them.   
+
+
+If we have this pattern:   
+`AkkBkC`   
+`B` takes in account all of its neighbours.   
 
 
 ## Etc
-I've coded this in a few hours so feel free to PR if you've found any bugs or improvments to this algorithm.
+I've coded this in a few hours so feel free to PR if you've found any bugs or improvments to this algorithm.   
