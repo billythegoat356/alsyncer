@@ -1,0 +1,19 @@
+[project]
+name = "alsyncer"
+version = "0.0.1"
+description = "A homemade algorithm that synchronises a text alignment with a reference text."
+authors = [{ name = "billythegoat356", email = "billythegoat356@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pydantic"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["alsyncer*"]
