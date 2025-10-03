@@ -73,7 +73,7 @@ def round_alignment(alignment: Alignment) -> None:
 
         new_duration = int(al.duration)
 
-        if bias > 0.5 - EPS:
+        if bias > 0.5:
             bias -= 1
             new_duration += 1
 
