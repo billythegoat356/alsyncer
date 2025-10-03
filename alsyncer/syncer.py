@@ -337,7 +337,12 @@ def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: b
         Alignment
     """
 
-    alignment_text = ''.join([al.character for al in alignment])
+    ## Temporary: store for checks
+    from copy import deepcopy
+    original_alignment = deepcopy(alignment)
+    ## ---
+
+    alignment_text = ''.join(al.character for al in alignment)
 
     # List of added characters in the alignment, aswell as missing ones
     additions, missing = fit_alignment(alignment_text, reference_text)
@@ -347,5 +352,22 @@ def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: b
 
     if round_alignment:
         round_alignment_func(alignment)
+
+    ## Temporary: check in case there are bugs
+    og_alignment_duration = sum(al.duration for al in original_alignment)
+    new_alignment_duration = sum(al.duration for al in alignment)
+
+    # Only check if both are integers, otherwise we'd possibly have floating point errors
+    both_integers = isinstance(og_alignment_duration, int) and isinstance(new_alignment_duration, int)
+
+    if both_integers and og_alignment_duration != new_alignment_duration:
+        raise Exception(f"Alignment duration changed!\n\nOriginal alignment: {original_alignment}\nReference text: {reference_text}\n\nNew alignment: {alignment}")
+    
+    new_alignment_text = ''.join(al.character for al in alignment)
+
+    if new_alignment_text != reference_text:
+        raise Exception(f"Alignment didn't synchronise to reference text!\n\nOriginal alignment: {original_alignment}\nReference text: {reference_text}\n\nNew alignment: {alignment}")
+    ## ---
+
 
 
