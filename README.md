@@ -7,6 +7,42 @@ However, sometimes you already have the text that is being said in the audio, bu
 But what if you need the exact same text that you have?   
 This algorithm solves this issue.   
 
+
+# Usage
+First, turn your alignment structure into what alsyncer expects.   
+```py
+from alsyncer import CharAlignment
+
+alignment = [
+    CharAlignment(character="H", duration=100),
+    CharAlignment(character="i", duration=50)
+]
+```
+The duration can be of whatever unit, but it is recommended to use integers that represent milliseconds.   
+
+Then, sync it with a reference text:
+```py
+from alsyncer import sync_alignment
+
+reference_text = "Hi!"
+sync_alignment(alignment, reference_text)
+
+print(alignment)
+# [
+#     CharAlignment(character="H", duration=100),
+#     CharAlignment(character="i", duration=25),
+#     CharAlignment(character="!", duration=25)
+# ]
+```
+Note that the alignment will always end up getting rounded to eliminate floating point numbers introduced from duration distribution.   
+It will however maintain identical total duration.   
+
+If, for some reason, you want to sync an alignment containing floating point numbers, pass the following parameter:
+```py
+sync_alignment(alignment, reference_text, round_alignment=False)
+```
+This will disable alignment rounding at the end.
+
 # Algorithm
 
 ## Process
@@ -16,6 +52,7 @@ It expects an alignment as input, aswell as a reference text:
 - It then checks which parts from the reference text are **missing** from the alignment
 - Then, it **removes all the additions** and distributes the durations
 - Finally, it **inserts the missing characters** and distributes durations from their neighbours
+- (optional) At the end, it rounds the durations to ensure the alignment only contains integer values. It also conservs total duration.
 
 Note that when distributing/inserting durations, the algorithm doesn't look at the character to determine adequate duration ratio, but it splits it evenly with the characters at the edges, which may not be accurate in some cases.   
 
