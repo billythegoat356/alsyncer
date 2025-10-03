@@ -87,7 +87,7 @@ def fit_alignment(
 
 
 
-def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
+def remove_additions(alignment: Alignment, additions: list[int]) -> None:
     """
     Removes the list of given additions from the alignment
     NOTE: May adjust the alignment into containing floating point values
@@ -96,13 +96,10 @@ def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
     Parameters:
         alignment: Alignment
         additions: list[int]
-
-    Returns:
-        Alignment
     """
 
     if not additions:
-        return alignment
+        return
     
     # Alignment is full of additions, duration cannot be preserved, this is not possible
     if len(additions) == len(alignment):
@@ -116,7 +113,7 @@ def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
         if chunk_additions[0] == 0:
             addit_sum = sum(alignment[i].duration for i in chunk_additions)
             alignment[chunk_additions[-1]+1].duration += addit_sum
-            
+
         # If its to the end, do the opposite
         elif chunk_additions[-1] == len(alignment)-1:
             addit_sum = sum(alignment[i].duration for i in chunk_additions)
@@ -143,29 +140,26 @@ def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
 
 
     # Remove additions from alignment at the end
-    alignment = [x for i, x in enumerate(alignment) if i not in additions]
+    for i in reversed(additions): # Reverse to not have to carry gap
+        alignment.pop(i)
 
 
-    return alignment
 
-
-def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -> Alignment:
+def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -> None:
     """
     Adds all the missing characters from the reference text to the alignment
     Handles durations distribution
     NOTE: May adjust the alignment into containing floating point values
+    Mutates in place
 
     Parameters:
         alignment: Alignment
         reference_text: str
         missing: list[int]
-
-    Returns:
-        Alignment
     """
 
     if not missing:
-        return alignment
+        return
     
     # Alignment is empty, we cannot distribute anything
     if not alignment:
@@ -215,11 +209,11 @@ def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -
             else:
                 duration_per_char = next_char.duration / (len(chunk_missing) + 1)
 
-            # Rebuild the alignment
-            alignment = [
+            # Add in the beginning
+            alignment[0:0] = [
                 CharAlignment(character=reference_text[i], duration=duration_per_char)
                 for i in chunk_missing
-            ] + alignment
+            ]
 
             # Override next char only if not distributed (it will be done later)
             if not next_char_distributed:
@@ -252,8 +246,8 @@ def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -
             else:
                 duration_per_char = prev_char.duration / (len(chunk_missing) + 1)
 
-            # Rebuild the alignment
-            alignment = alignment + [
+            # Add in the end
+            alignment[len(alignment):len(alignment)] = [
                 CharAlignment(character=reference_text[i], duration=duration_per_char)
                 for i in chunk_missing
             ]
@@ -320,10 +314,7 @@ def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -
                     CharAlignment(character=char, duration=dur)
                 )
 
-            alignment = alignment[:chunk_missing[0]] + new_chars + alignment[chunk_missing[0]:]
-
-
-    return alignment
+            alignment[chunk_missing[0]:chunk_missing[0]] = new_chars
 
 
 
