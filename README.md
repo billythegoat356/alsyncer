@@ -1,5 +1,6 @@
 # alsyncer
-A homemade algorithm that synchronises a text alignment with a reference text.
+A homemade algorithm that synchronises a text alignment with a reference text.   
+Uses Symmetric Alignment Distribution.   
 
 # Idea
 Most STT algorithms don't support receiving a reference text, meaning you have to trust their given characters alignment.   
@@ -114,3 +115,11 @@ If we have this pattern:
 
 ## Etc
 I've coded this in a few hours so feel free to PR if you've found any bugs or improvments to this algorithm.   
+
+## Ideas
+Other ideas I had:   
+
+In the context of STT alignment, it may also happen (maybe even more) that one neighbour wrongfully gets a higher duration, or lower duration, meaning that it has missing characters, or additions right next to it.   
+As opposed to the current algorithm that distributes evenly with both neighbours, we could focus on the neighbour with the lower duration (in the case of removing characters) or on the neighbour with the higher duration (if adding missing characters).   
+
+However this would require linguistic analysis (e.g., a `.` is expected to have a higher duration than a `a`).

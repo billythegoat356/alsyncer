@@ -16,4 +16,4 @@ print(alignment)
 #     CharAlignment(character="H", duration=100),
 #     CharAlignment(character="i", duration=25),
 #     CharAlignment(character="!", duration=25)
-# ]
+# ]y
