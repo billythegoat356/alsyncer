@@ -1,6 +1,7 @@
+import math
 
-from .models import Alignment
-
+from .models import Alignment, CharAlignment
+from .utils import chunk
 
 
 
@@ -84,9 +85,13 @@ def fit_alignment(
 
 
 
+
+
 def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
     """
     Removes the list of given additions from the alignment
+    NOTE: May adjust the alignment into containing floating point values
+    Mutates in place
 
     Parameters:
         alignment: Alignment
@@ -105,58 +110,222 @@ def remove_additions(alignment: Alignment, additions: list[int]) -> Alignment:
 
     # We process by chunks - if some additions are grouped together,
     # they need to be handled together so the extremities end up correctly distributed
-    chunk_beginning = 0
-    chunk_end = 1
-    while chunk_beginning != len(additions):
-        if (
-            chunk_end == len(additions) or # Its the last one
-            additions[chunk_end] > additions[chunk_end - 1] + 1 # Its not in a row (bigger)
-        ):
-            # Process now
-            chunk_additions = additions[chunk_beginning:chunk_end]
+    for chunk_additions in chunk(additions):
 
-            # If its from the beginning, just put everything to the next one
-            if chunk_additions[0] == 0:
-                addit_sum = sum(alignment[i].duration for i in chunk_additions)
-                alignment[chunk_additions[-1]+1].duration += addit_sum
-            # If its to the end, do the opposite
-            elif chunk_additions[-1] == len(alignment)-1:
-                addit_sum = sum(alignment[i].duration for i in chunk_additions)
-                alignment[chunk_additions[0]-1].duration += addit_sum
+        # If its from the beginning, just put everything to the next one
+        if chunk_additions[0] == 0:
+            addit_sum = sum(alignment[i].duration for i in chunk_additions)
+            alignment[chunk_additions[-1]+1].duration += addit_sum
+            
+        # If its to the end, do the opposite
+        elif chunk_additions[-1] == len(alignment)-1:
+            addit_sum = sum(alignment[i].duration for i in chunk_additions)
+            alignment[chunk_additions[0]-1].duration += addit_sum
 
-            else:
-                # Even
-                if len(chunk_additions) % 2 == 0:
-                    addit_sum_left = sum(alignment[i].duration for i in chunk_additions[:len(chunk_additions)//2])
-                    addit_sum_right = sum(alignment[i].duration for i in chunk_additions[len(chunk_additions)//2:])
-                    
-                    alignment[chunk_additions[0]-1].duration += addit_sum_left
-                    alignment[chunk_additions[-1]+1].duration += addit_sum_right
+        else:
+            addit_sum_left = sum(
+                alignment[i].duration for i in 
+                chunk_additions[:math.floor(len(chunk_additions)/2)]
+            )
+            addit_sum_right = sum(
+                alignment[i].duration for i in 
+                chunk_additions[math.ceil(len(chunk_additions)/2):]
+            )
 
-                # Odd
-                else:
-                    addit_sum_left = sum(alignment[i].duration for i in chunk_additions[:len(chunk_additions)//2])
-                    addit_sum_right = sum(alignment[i].duration for i in chunk_additions[len(chunk_additions)//2+1:])
-                    addit_middle = alignment[chunk_additions[len(chunk_additions)//2]].duration
+            # If odd, split the middle
+            if len(chunk_additions) % 2 == 1:
+                addit_middle = alignment[chunk_additions[len(chunk_additions)//2]].duration
+                addit_sum_left += addit_middle / 2
+                addit_sum_right += addit_middle / 2
 
-                    # Preserve total
-                    addit_sum_left += round(addit_middle / 2)
-                    addit_sum_right += addit_middle - round(addit_middle / 2)
-                    
-                    alignment[chunk_additions[0]-1].duration += addit_sum_left
-                    alignment[chunk_additions[-1]+1].duration += addit_sum_right
+            alignment[chunk_additions[0]-1].duration += addit_sum_left
+            alignment[chunk_additions[-1]+1].duration += addit_sum_right
 
-            # Reset chunk beginning
-            chunk_beginning = chunk_end
-
-        # Increment chunk end
-        chunk_end += 1
 
     # Remove additions from alignment at the end
     alignment = [x for i, x in enumerate(alignment) if i not in additions]
 
 
     return alignment
+
+
+def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -> Alignment:
+    """
+    Adds all the missing characters from the reference text to the alignment
+    Handles durations distribution
+    NOTE: May adjust the alignment into containing floating point values
+
+    Parameters:
+        alignment: Alignment
+        reference_text: str
+        missing: list[int]
+
+    Returns:
+        Alignment
+    """
+
+    if not missing:
+        return alignment
+    
+    # Alignment is empty, we cannot distribute anything
+    if not alignment:
+        raise Exception("Alignment cannot be empty")
+
+    chunked_missing = chunk(missing)
+
+    # We also process by chunks
+    for chunk_i, chunk_missing in enumerate(chunked_missing):
+
+        # Whether the prev char was also distributed before
+        prev_char_distributed = (
+            chunk_i != 0 and  # Is not the first
+            chunked_missing[chunk_i-1][-1] == chunk_missing[0] - 2 # The last index of the previous missing chunk has only 2 diff with the current first
+        )
+        # Same for next char
+        next_char_distributed = (
+            chunk_i != len(chunked_missing) - 1 and # Is not the last
+            chunked_missing[chunk_i+1][0] == chunk_missing[-1] + 2 # The first index of the next missing chunk has only 2 diff with the current last
+        )
+
+
+        # If its from the beginning, split evenly with the next one
+        if chunk_missing[0] == 0:
+            # Get next char
+            next_char = alignment[0]
+
+            if next_char_distributed:
+                # If next one is distributed aswell, different handling
+                next_chunk = chunked_missing[chunk_i+1]
+
+                # If next chunk ends
+                if next_chunk[-1] == len(reference_text) - 1:
+                    # It will be split evenly with next chunk aswell
+                    duration_per_char = next_char.duration / (len(chunk_missing) + 1 + len(next_chunk)) # Account for this chunk, next one, and the char.
+
+                # Next chunk is distributed on both ends
+                else:
+                    # Take in account its own half of next chunk
+                    # We use 2 because in some cases next chunk may be odd and one would take 1/X
+                    duration_per_char = 2 / (
+                        2 * (len(chunk_missing))
+                        + 2
+                        + len(next_chunk)
+                    ) * next_char.duration
+
+            else:
+                duration_per_char = next_char.duration / (len(chunk_missing) + 1)
+
+            # Rebuild the alignment
+            alignment = [
+                CharAlignment(character=reference_text[i], duration=duration_per_char)
+                for i in chunk_missing
+            ] + alignment
+
+            # Override next char only if not distributed (it will be done later)
+            if not next_char_distributed:
+                next_char.duration = duration_per_char
+
+        # If its to the end, do the opposite
+        elif chunk_missing[-1] == len(reference_text)-1:
+            # Get prev char
+            prev_char = alignment[-1]
+
+            if prev_char_distributed:
+                # If prev one is distributed aswell, different handling
+                prev_chunk = chunked_missing[chunk_i-1]
+
+                # If prev chunk starts
+                if prev_chunk[0] == 0:
+                    # It will be split evenly with prev chunk aswell
+                    duration_per_char = prev_char.duration / (len(chunk_missing) + 1 + len(prev_chunk))
+
+                # Prev chunk is distributed on both ends
+                else:
+                    # Take in account its own half of prev chunk
+                    # We use 2 because in some cases next chunk may be odd and one would take 1/X
+                    duration_per_char = 2 / (
+                        2 * (len(chunk_missing))
+                        + 2
+                        + len(prev_chunk)
+                    ) * prev_char.duration
+
+            else:
+                duration_per_char = prev_char.duration / (len(chunk_missing) + 1)
+
+            # Rebuild the alignment
+            alignment = alignment + [
+                CharAlignment(character=reference_text[i], duration=duration_per_char)
+                for i in chunk_missing
+            ]
+
+            # Override prev char
+            prev_char.duration = duration_per_char
+
+        # It's anywhere in the middle
+        else:
+            # Get surrounding chars
+            prev_char = alignment[chunk_missing[0] - 1]
+            next_char = alignment[chunk_missing[0]]
+
+            prev_dur = prev_char.duration
+            next_dur = next_char.duration
+
+            # Get dividers for both
+            # 2 is for the edge, then we take length because we only take half but multiplied by two. Only 1 if odd
+            prev_div = len(chunk_missing) + 2
+            next_div = len(chunk_missing) + 2
+
+            # If they were also borders before, or are after, add the next chunk missing
+            if prev_char_distributed:
+                prev_chunk = chunked_missing[chunk_i-1]
+                # Previous one starts from the start
+                if prev_chunk[0] == 0:
+                    prev_div += 2 * len(prev_chunk)
+                # Prev one distributed evenly
+                else:
+                    prev_div += len(prev_chunk)
+            
+            if next_char_distributed:
+                next_chunk = chunked_missing[chunk_i+1]
+                if next_chunk[-1] == len(reference_text) - 1:
+                    next_div += 2 * len(next_chunk)
+                else:
+                    next_div += len(next_chunk)
+
+            # Update them
+            prev_char.duration = 2 / prev_div * prev_dur
+
+            if not next_char_distributed:
+                next_char.duration = 2 / next_div * next_dur
+
+            # Update new chars
+            new_chars: Alignment = []
+            for i, missing_index in enumerate(chunk_missing):
+                char = reference_text[missing_index]
+                mid = (len(chunk_missing) + 1 ) / 2
+
+                # Only take from prev
+                if i + 1 < mid:
+                    dur = 2 / prev_div * prev_dur
+
+                # Take from both (odd)
+                elif i + 1 == mid:
+                    dur = prev_dur / prev_div + next_dur / next_div
+
+                # Only from next
+                elif i + 1 > mid:
+                    dur = 2 / next_div * next_dur
+
+                new_chars.append(
+                    CharAlignment(character=char, duration=dur)
+                )
+
+            alignment = alignment[:chunk_missing[0]] + new_chars + alignment[chunk_missing[0]:]
+
+
+    return alignment
+
+
 
 
 

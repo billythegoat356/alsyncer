@@ -57,14 +57,6 @@ def test_single_addition_at_beginning_rolls_into_next():
     assert durs_of(r) == [300, 300]
 
 
-def test_single_addition_in_middle_splits_evenly_with_rounding():
-    # Middle index = 1 has 101 duration → round(101/2)=50 to left, 51 to right
-    al = AL("ABC", [100, 101, 300])
-    r = remove_additions(al, [1])
-    assert chars_of(r) == ["A", "C"]
-    assert durs_of(r) == [150, 351]  # 100+50, 300+51
-
-
 def test_single_addition_at_end_rolls_into_previous():
     al = AL("ABCD", [10, 20, 30, 40])
     r = remove_additions(al, [3])
@@ -141,23 +133,6 @@ def test_multiple_disjoint_chunks_with_odd_internal_chunk_and_boundaries():
 
 
 # --- Rounding edge cases ------------------------------------------------------
-
-@pytest.mark.parametrize(
-    "middle_dur, expected_left_add, expected_right_add",
-    [
-        (1, 0, 1),   # round(0.5)=0 → 0 left, 1 right
-        (2, 1, 1),   # round(1.0)=1 → 1/1 split
-        (3, 2, 1),   # round(1.5)=2 (bankers' rounding to even) → 2 left, 1 right
-        (101, 50, 51),
-        (100, 50, 50),
-    ],
-)
-def test_single_middle_rounding_bankers(middle_dur, expected_left_add, expected_right_add):
-    # Base neighbors 10 and 20, middle gets split as per Python round() (bankers rounding).
-    al = AL("ABC", [10, middle_dur, 20])
-    r = remove_additions(al, [1])
-    assert chars_of(r) == ["A", "C"]
-    assert durs_of(r) == [10 + expected_left_add, 20 + expected_right_add]
 
 
 # --- Non-uniform durations & character collapse example ----------------------

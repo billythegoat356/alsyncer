@@ -6,6 +6,6 @@ from pydantic import BaseModel
 
 class CharAlignment(BaseModel):
     character: str
-    duration: int # ms
+    duration: int | float # ms
 
 Alignment = list[CharAlignment]
