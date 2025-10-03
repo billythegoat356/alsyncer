@@ -152,5 +152,43 @@ def test_10():
         "H!lo",
         (90, 30, 30, 50),
         "Hello",
-        (70, 50, 30, 50)
+        (52, 53, 22, 23, 50)
+    )
+
+
+def test_11():
+    # Complex mixed case: additions on left/center/right, and missings in center and at the end.
+    #
+    # Alignment → Reference:
+    #   "?He!lo??"  →  "Hello!"
+    #
+    # Durations before:
+    #   ?(12) H(80) e(60) !(30) l(40) o(70) ?(15) ?(25)
+    #
+    # Step A — Remove additions (per README rules):
+    #   - Leading '?' at far left → all to nearest neighbor H: H=80+12=92
+    #   - Single '!' between e and l (odd count) → split evenly to both:
+    #       e=60+15=75, l=40+15=55
+    #   - Trailing '??' at far right → both to nearest neighbor o:
+    #       o=70+15+25=110
+    #   Now: "H e l o" with (92, 75, 55, 110); total conserved = 332
+    #
+    # Step B — Insert missings:
+    #   1) Missing 'l' between e(75) and l(55), n=1 (symmetric):
+    #        e' = 2/3*75 = 50
+    #        new_l = 1/3*75 + 1/3*55 = 25 + 18.333... = 43.333...
+    #        l' = 2/3*55 = 36.666...
+    #      Now: "H e l l o" with (92, 50, 43.333..., 36.666..., 110)
+    #   2) Missing '!' at far right after o(110), edge insert n=1:
+    #        o' = 110/2 = 55
+    #        '!' = 110/2 = 55
+    #
+    # Pre-round durations: (92, 50, 43.333..., 36.666..., 55, 55)
+    # Rounding (keep sum=332; >0.5 rounds up as carry):
+    #   → (92, 50, 43, 37, 55, 55)
+    T(
+        "?He!lo??",
+        (12, 80, 60, 30, 40, 70, 15, 25),
+        "Hello!",
+        (92, 50, 43, 37, 55, 55)
     )

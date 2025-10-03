@@ -59,7 +59,7 @@ It expects an alignment as input, aswell as a reference text:
 - It then checks which parts from the reference text are **missing** from the alignment
 - Then, it **removes all the additions** and distributes the durations
 - Finally, it **inserts the missing characters** and distributes durations from their neighbours
-- (optional) At the end, it rounds the durations to ensure the alignment only contains integer values. It also conservs total duration.
+- At the end (optionnally), it rounds the durations to ensure the alignment only contains integer values. It also conservs total duration. The algorithm used is custom and rounds to 1 whenever the carried bias is superior to 0.5.   
 
 Note that when distributing/inserting durations, the algorithm doesn't look at the character to determine adequate duration ratio, but it splits it evenly with the characters at the edges, which may not be accurate in some cases.   
 
