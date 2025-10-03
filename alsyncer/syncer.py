@@ -1,7 +1,7 @@
 import math
 
 from .models import Alignment, CharAlignment
-from .utils import chunk
+from .utils import chunk, round_alignment as round_alignment_func
 
 
 
@@ -322,13 +322,16 @@ def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -
 
 
 
-def sync_alignment(alignment: Alignment, reference_text: str) -> Alignment:
+def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: bool = True) -> Alignment:
     """
     Synchronises the given alignment to a reference text
 
     Parameters:
         alignment: Alignment
         reference_text: str
+        round_alignment: bool = True - whether to round the final alignment to include only integers.
+                                       Missing/additions distribution introduces floating point durations,
+                                       And usually you want the durations to be integers (milliseconds)
 
     Returns:
         Alignment
@@ -339,5 +342,10 @@ def sync_alignment(alignment: Alignment, reference_text: str) -> Alignment:
     # List of added characters in the alignment, aswell as missing ones
     additions, missing = fit_alignment(alignment_text, reference_text)
 
-    raise NotImplementedError()
+    remove_additions(alignment, additions)
+    add_missing(alignment, reference_text, missing)
+
+    if round_alignment:
+        round_alignment_func(alignment)
+
 

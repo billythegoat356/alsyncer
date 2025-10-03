@@ -40,20 +40,18 @@ def chunk(indexes: list[int]) -> list[list[int]]:
 
 EPS = 1e-9
 
-def round_alignment(alignment: Alignment) -> Alignment:
+def round_alignment(alignment: Alignment) -> None:
     """
     After processing, the alignment may contain floating point number
     This function takes care of rounding those to ensure the alignment contains only integers, which are often needed for further processing.
     NOTE: The sum of all the durations of the alignment is required to be an integer
-
+    Mutates in place
+    
     The rounding happens towards the center - a bias is carried, whenever it exceeds 0.5, the current number gets added 1
     This ensures local smoothness.
 
     Parameters:
         alignment: Alignment
-
-    Returns:
-        Alignment
 
     -----------
 
@@ -70,7 +68,6 @@ def round_alignment(alignment: Alignment) -> Alignment:
         raise Exception("The sum of all the durations of the alignment is not an integer!")
 
     bias = 0
-    new_alignment: Alignment = []
     for al in alignment:
         bias += al.duration - int(al.duration)
 
@@ -80,9 +77,4 @@ def round_alignment(alignment: Alignment) -> Alignment:
             bias -= 1
             new_duration += 1
 
-        new_alignment.append(CharAlignment(
-            character=al.character,
-            duration=new_duration
-        ))
-
-    return new_alignment
+        al.duration = new_duration
