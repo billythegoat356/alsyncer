@@ -7,6 +7,12 @@ However, sometimes you already have the text that is being said in the audio, bu
 But what if you need the exact same text that you have?   
 This algorithm solves this issue.   
 
+# Installation
+```sh
+git clone https://github.com/billythegoat356/alsyncer
+cd alsyncer
+pip install .
+```
 
 # Usage
 First, turn your alignment structure into what alsyncer expects.   

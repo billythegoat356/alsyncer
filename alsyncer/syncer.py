@@ -337,7 +337,7 @@ def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: b
         Alignment
     """
 
-    alignment_text = ''.join(alignment)
+    alignment_text = ''.join([al.character for al in alignment])
 
     # List of added characters in the alignment, aswell as missing ones
     additions, missing = fit_alignment(alignment_text, reference_text)
