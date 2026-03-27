@@ -3,86 +3,33 @@ import math
 from .models import Alignment, CharAlignment
 from .utils import chunk, round_alignment as round_alignment_func
 
+from difflib import SequenceMatcher
 
 
 
 def fit_alignment(
-        alignment_text: str, reference_text: str, 
-        alignment_gap: int = 0, reference_gap: int = 0
-    ) -> tuple[list[int], list[int]]:
+    alignment_text: str,
+    reference_text: str,
+    alignment_gap: int = 0,
+    reference_gap: int = 0,
+) -> tuple[list[int], list[int]]:
     """
-    Fits the given alignment text to a reference text
-    Returns a list of additions in the alignment text, and missing characters from the reference text, under the form of indexes
-    
-    Parameters:
-        alignment_text: str
-        reference_text: str
-        alignment_gap: int = 0
-        reference_gap: int = 0
-
     Returns:
-        tuple[list[int], list[int]] - additions and missing chars
+        additions: indices of characters present in alignment_text but not matched in reference_text
+        missing: indices of characters present in reference_text but not matched in alignment_text
     """
+    matcher = SequenceMatcher(None, alignment_text, reference_text, autojunk=False)
 
-    # Start fitting with the minimum length
-    min_length = min(len(alignment_text), len(reference_text))
+    additions: list[int] = []
+    missing: list[int] = []
 
-    # Regressively fit until there is nothing anymore
-    for current_length in range(min_length, 0, -1):
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag in ("delete", "replace"):
+            additions.extend(range(alignment_gap + i1, alignment_gap + i2))
+        if tag in ("insert", "replace"):
+            missing.extend(range(reference_gap + j1, reference_gap + j2))
 
-        # The difference between the alignment text and the current length tells us how many substrings we can take
-        diff = len(alignment_text) - current_length
-
-        # Progressively cut substrings from left to right
-        for start_i in range(diff+1):
-            substring = alignment_text[start_i:start_i+current_length]
-
-            # Try to index them in the reference text
-            try:
-                pos = reference_text.index(substring)
-            except ValueError:
-                continue
-            
-            has_before = pos != 0 or start_i != 0
-            has_after = (
-                pos + current_length < len(reference_text) or
-                start_i + current_length < len(alignment_text)
-            )
-
-            additions: list[int] = []
-            missing: list[int] = []
-
-            # Fit part before
-            if has_before:
-                before_alignment_text = alignment_text[:start_i]
-                before_reference_text = reference_text[:pos]
-                _a, _m = fit_alignment(before_alignment_text, before_reference_text, alignment_gap, reference_gap)
-                additions.extend(_a)
-                missing.extend(_m)
-
-            # Fit part after
-            if has_after:
-                this_alignment_gap = start_i+current_length
-                this_reference_gap = pos+current_length
-
-                after_alignment_text = alignment_text[this_alignment_gap:]
-                after_reference_text = reference_text[this_reference_gap:]
-
-                alignment_gap += this_alignment_gap
-                reference_gap += this_reference_gap
-                
-                _a, _m = fit_alignment(after_alignment_text, after_reference_text, alignment_gap, reference_gap)
-                additions.extend(_a)
-                missing.extend(_m)
-
-            return additions, missing
-
-    # If nothing was fit, return everything
-    return (
-        [_a + alignment_gap for _a in range(len(alignment_text))],
-        [_m + reference_gap for _m in range(len(reference_text))],
-    )
-
+    return additions, missing
 
 
 
@@ -322,7 +269,7 @@ def add_missing(alignment: Alignment, reference_text: str, missing: list[int]) -
 
 
 
-def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: bool = True) -> Alignment:
+def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: bool = True):
     """
     Synchronises the given alignment to a reference text
 
@@ -333,8 +280,6 @@ def sync_alignment(alignment: Alignment, reference_text: str, round_alignment: b
                                        Missing/additions distribution introduces floating point durations,
                                        And usually you want the durations to be integers (milliseconds)
 
-    Returns:
-        Alignment
     """
 
     ## Temporary: store for checks
